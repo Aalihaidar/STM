@@ -1,6 +1,6 @@
 version: 4
 
-num_epochs: 1
+num_epochs: 300
 
 branch:
   train:
@@ -116,7 +116,7 @@ branch:
 
 data:
   train:
-    batch_size: 32
+    batch_size: 128
 
     type: "SiamFC"
 
@@ -154,7 +154,7 @@ data:
         color_jitter: 0.4
 
   val:
-    batch_size: 32
+    batch_size: 128
 
     type: "SiamFC"
 
@@ -184,7 +184,7 @@ data:
     processor: *processor_configs
 
   test:
-    batch_size: 1
+    batch_size: 8
 
     type: "Sequential"
 
