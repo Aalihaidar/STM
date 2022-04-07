@@ -1,0 +1,13 @@
+mixin:
+  fixed:
+    - path: "runs.branch"
+      action: "include"
+      value: "track"
+    - path: "runs.data"
+      action: "include"
+      value: "track"
+    - path: "runs.runner"
+      action: "include"
+      value: "track"
+    - path: "runs.num_epochs"
+      value: 1

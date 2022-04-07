@@ -5,8 +5,10 @@ def get_train_args_parser():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--method_name', default = 'SwinTrack', type=str, help='Method name')
     parser.add_argument('--config_name', default = 'Tiny', type=str, help='Config name')
-    parser.add_argument('--mixin_config', default= 'evaluation.yaml', type=str, action='append')
+    parser.add_argument('--mixin_config', default= 'tracking.yaml', type=str, action='append')
     parser.add_argument('--output_dir', default= '/home/lab/Documents/swinTrack/SwinTrack/output', help='path where to save, empty for no saving')
+    # parser.add_argument('--mixin_config', default= 'evaluation.yaml', type=str, action='append')
+    parser.add_argument('--video_path',default='/home/lab/Documents/STARK/Stark/videos/DJI_2.mp4',type=str,help = 'path to video that you what to apply tracker')
 
     # parser.add_argument('--mixin_config', default= 'got10k.yaml', type=str, action='append')
     # parser.add_argument('--output_dir', default= '/home/lab/Documents/swinTrack/SwinTrack/output', help='path where to save, empty for no saving')

@@ -16,43 +16,56 @@ def _run_fn(fn, args):
     else:
         return fn(args)
 
+class Tracker:
+    def __init__(self,runner,branch_name):
+        self.device = runner.tracker_evaluator[branch_name].device
+        self.search_image_curation_parameter_provider  = runner.tracker_evaluator[branch_name].search_curation_parameter_provider
+        self.search_curation_image_size = runner.tracker_evaluator[branch_name].search_curation_image_size
+        self.bounding_box_post_processor = runner.tracker_evaluator[branch_name].bounding_box_post_processor
+        self.post_processor = runner.tracker_evaluator[branch_name].post_processor
+        self.interpolation_mode = runner.tracker_evaluator[branch_name].interpolation_mode
+        self.template_curated_image_shape = runner.tracker_evaluator[branch_name].template_curated_image_cache_shape
 
+    def initialize_tracker(self,video_data):
+        self.z_curated = video_data['z_curated']
+        self.z_curated = self.z_curated.to(device = self.device)
+        self.z_bbox = video_data['z_bbox']
+        self.z_image_mean = video_data['z_image_mean']
+        self.full_image = video_data['x']
+        self.frame_index = video_data['frame_index']
+        self.z_feat = video_data['z_feat']
 
         
-def run_tracking( model, TrackerData,search_image_curation_parameter_provider,search_curation_image_size,bounding_box_post_processor,post_processor,interpolation_mode,device ):
-    template_image_mean = TrackerData.z_image_mean# data['z_image_mean']
-    search_image = TrackerData.full_image# data['x']
-    search_image = search_image.to(device=device)
+    def run_tracking( self,model):
+        search_image = self.full_image.to(device=self.device)
 
-    if TrackerData.frame_index == 1 :
-        tracker_initialization_results = None
-        template_object_bbox = TrackerData.z_bbox
-        template_curated_image = TrackerData.z_curated
-        template_curated_image = template_curated_image.to(device = device)
-        search_image_curation_parameter_provider.initialize(template_object_bbox) # # update it with new position (output)
-        template_curated_image_cache = template_curated_image.unsqueeze(0)
-        initialization_samples = template_curated_image_cache
-        tracker_initialization_results = _run_fn(model.initialize, initialization_samples)
-        TrackerData.z_feat = tracker_initialization_results
+        # get template feature from 1st frame
+        if self.frame_index == 1 :
+            self.search_image_curation_parameter_provider.initialize(self.z_bbox) 
+            self.z_feat  = _run_fn(model.initialize, self.z_curated.unsqueeze(0))
 
-    search_image_size = search_image.shape[1:]
-    search_image_size = torch.tensor((search_image_size[1], search_image_size[0]),device=device)  # (W, H)
-    curation_parameter = search_image_curation_parameter_provider.get(search_curation_image_size)
-    search_curated_image_cache,_ = do_SiamFC_curation(search_image, search_curation_image_size, curation_parameter,
-                            interpolation_mode, template_image_mean)
-    outputs = None
+        search_image_size = search_image.shape[1:]
+        search_image_size = torch.tensor((search_image_size[1], search_image_size[0]),device=self.device)  # (W, H)
+        curation_parameter = self.search_image_curation_parameter_provider.get(self.search_curation_image_size)
+        search_curated_image,_ = do_SiamFC_curation(search_image, self.search_curation_image_size, curation_parameter,
+                                self.interpolation_mode, self.z_image_mean)
+        tracking_sample = {
+            'z_feat' : self.z_feat,
+            'x' : search_curated_image.unsqueeze(0).to(device=self.device)
+            }
+            
+        #get output of model
+        output = None
+        if tracking_sample is not None:
+            output = _run_fn(model.track, tracking_sample)
+            output = self.post_processor(output)
+            predicted_iou, predicted_bounding_box = output['conf'], output['bbox']
+            predicted_bounding_box = predicted_bounding_box.to(torch.float64)
+            curation_parameter = curation_parameter.unsqueeze(0).to(device=self.device)
+            
+            #convert output to pixel
+            predicted_bounding_box = self.bounding_box_post_processor(predicted_bounding_box, curation_parameter[:predicted_bounding_box.shape[0], ...])
 
-    tracking_samples = {
-        'z_feat' : TrackerData.z_feat,
-        'x' : search_curated_image_cache.unsqueeze(0).to(device=device)
-        }
-        
-    if tracking_samples is not None:
-        outputs = _run_fn(model.track, tracking_samples)
-        outputs = post_processor(outputs)
-        predicted_iou, predicted_bounding_boxes = outputs['conf'], outputs['bbox']
-        predicted_bounding_boxes = predicted_bounding_boxes.to(torch.float64)
-        curation_parameter = curation_parameter.unsqueeze(0).to(device=device)
-        predicted_bounding_boxes = bounding_box_post_processor(predicted_bounding_boxes, curation_parameter[:predicted_bounding_boxes.shape[0], ...])
-    search_image_curation_parameter_provider.update(predicted_iou, predicted_bounding_boxes.squeeze(0), search_image_size)
-    return predicted_bounding_boxes
+        #update curation parameter for search image for next frame
+        self.search_image_curation_parameter_provider.update(predicted_iou, predicted_bounding_box.squeeze(0), search_image_size)
+        return predicted_bounding_box.squeeze(0)

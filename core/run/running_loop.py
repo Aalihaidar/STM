@@ -15,7 +15,8 @@ from data.tracking.methods.sequential.curation_parameter_provider import SiamFCC
 import torch
 from torchvision.transforms.functional import normalize
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-from core.run.run_tracking import run_tracking
+from core.run.run_tracking import Tracker
+
 
 
 
@@ -54,7 +55,7 @@ def get_model(model: torch.nn.Module):
     else:
         return model
         
-
+# write the source TODO
 def crop_and_resize(img, center, size, out_size,
                     border_type=cv.BORDER_CONSTANT,
                     border_value=(0, 0, 0),
@@ -87,123 +88,123 @@ def crop_and_resize(img, center, size, out_size,
 def numpy_to_torch(a: np.ndarray):
     return torch.from_numpy(a).float().permute(2, 0, 1).unsqueeze(0)
 
-class RunTrackerData:
-    def __init__(self,data) -> None:
-        self.z_curated = data['z_curated']
-        self.z_bbox = data['z_bbox']
-        self.z_image_mean = data['z_image_mean']
-        self.full_image = data['x']
-        self.frame_index = data['frame_index']
-        
-def run_tracker(model,runner,branch_name):
-    device = runner.tracker_evaluator[branch_name].device
-    search_image_curation_parameter_provider  = runner.tracker_evaluator[branch_name].search_curation_parameter_provider
-    search_curation_image_size = runner.tracker_evaluator[branch_name].search_curation_image_size
-    bounding_box_post_processor = runner.tracker_evaluator[branch_name].bounding_box_post_processor
-    post_processor = runner.tracker_evaluator[branch_name].post_processor
-    interpolation_mode = runner.tracker_evaluator[branch_name].interpolation_mode
-    template_curated_image_cache_shape = runner.tracker_evaluator[branch_name].template_curated_image_cache_shape
+#
+def get_template(box_XYWH ,img,template_image_size):
+    x, y, w, h = box_XYWH
+    bbox = [x,y,x+h-1,y+w-1]#box_XYXY
+    box = box_XYWH
+    box_CyCxHW = np.array([
+    box[1] - 1 + (box[3] - 1) / 2,
+    box[0] - 1 + (box[2] - 1) / 2,
+    box[3], box[2]], dtype=np.float32)
+    center,target_sz = box_CyCxHW[:2], box_CyCxHW[2:]
 
-    is_training = False
-    model.train(is_training)
-    torch.no_grad()
-    if not is_training:
-        model = get_model(model)
-        model.eval()
-
-    #model is ready here
-        video_pth = '/home/lab/Documents/STARK/Stark/videos/DJI_2.mp4'
-        cap = cv.VideoCapture(video_pth)
-        display_name = 'Display: swinTrack'
-        cv.namedWindow(display_name, cv.WINDOW_NORMAL | cv.WINDOW_KEEPRATIO)
-        cv.resizeWindow(display_name, 960, 720)
-        success, frame = cap.read()
-        frame_RGB = cv.cvtColor(frame,cv.COLOR_BGR2RGB)
-        cv.imshow(display_name, frame)
-        while True:
-            cv.putText(frame, 'Select target ROI and press ENTER', (20, 30), cv.FONT_HERSHEY_COMPLEX_SMALL,
-                        1.5, (0, 0, 0), 1)
-            x, y, w, h = cv.selectROI(display_name, frame, fromCenter=False)
-            init_state = [x, y, w, h]
-            full_image = numpy_to_torch(frame_RGB).squeeze(0).to(device=device)
-            box_corner = [x,y,x+h-1,y+w-1]
-            box = init_state
-            box = np.array([
-            box[1] - 1 + (box[3] - 1) / 2,
-            box[0] - 1 + (box[2] - 1) / 2,
-            box[3], box[2]], dtype=np.float32) # [yc,xc,h,w]
-            center,target_sz = box[:2], box[2:]
-            # exemplar and search sizes
-            cfg_context = 0.5
-            cfg_instance_sz = search_curation_image_size[0]
-            cfg_exemplar_sz = template_curated_image_cache_shape[3]
-            context = cfg_context * np.sum(target_sz)
-            z_sz = np.sqrt(np.prod(target_sz + context))
-            x_sz = z_sz * \
-            cfg_instance_sz / cfg_exemplar_sz
-            # exemplar image
-            z_curated = crop_and_resize(
-                frame_RGB, center, z_sz,
-                out_size=cfg_exemplar_sz)
-            z_curated_tensor = torch.from_numpy(z_curated).float().permute(2, 0, 1)
-
-            z_curated = normalize(z_curated_tensor/255. , mean=torch.tensor(IMAGENET_DEFAULT_MEAN), std=torch.tensor(IMAGENET_DEFAULT_STD))
-            template_curated_image_cache = z_curated.unsqueeze(0)
-            template_image_mean = torch.mean(template_curated_image_cache,axis =2)
-            template_image_mean = torch.mean(template_image_mean,axis =2)
-            template_object_bbox =torch.tensor(box_corner)
-            video_data_dic = {
-                'z_curated' : z_curated,
-                'z_bbox' : template_object_bbox,
-                'z_image_mean' : template_image_mean,
-                'x' : full_image,
-                'frame_index' : 1,
-                'z_feat' : None
-                }
-            video_data = RunTrackerData(video_data_dic)            
-            break
-        while True:
-            with torch.no_grad():
-                predicted_bounding_box = run_tracking(model,
-                 video_data,
-                 search_image_curation_parameter_provider,
-                 search_curation_image_size,
-                 bounding_box_post_processor,
-                 post_processor,
-                 interpolation_mode,
-                 device)
-                output_box = predicted_bounding_box[0].to(device = 'cpu').numpy()
-                output_box_int = output_box.astype(int)
-                state = [output_box_int[0],
-                output_box_int[1],
-                output_box_int[2]-output_box_int[0]+1,
-                output_box_int[3]-output_box_int[1]+1]
-
-                # show output
-                cv.rectangle(frame, (state[0], state[1]), (state[2] + state[0], state[3] + state[1]),
-                            (0, 255, 0), 5)
-                font_color = (0, 0, 0)
-                cv.putText(frame, 'Tracking!', (20, 30), cv.FONT_HERSHEY_COMPLEX_SMALL, 1,
-                        font_color, 1)
-                cv.putText(frame, 'Press r to reset', (20, 55), cv.FONT_HERSHEY_COMPLEX_SMALL, 1,
-                        font_color, 1)
-                cv.putText(frame, 'Press q to quit', (20, 80), cv.FONT_HERSHEY_COMPLEX_SMALL, 1,
-                        font_color, 1)
-
-                # Display the resulting frame
-                cv.imshow(display_name, frame)
-                key = cv.waitKey(1)
-                if key == ord('q'):
-                    break
+    # exemplar and search sizes
+    cfg_context = 0.5
+    # cfg_instance_sz = search_image_size[0]
+    cfg_exemplar_sz = template_image_size[3]
+    context = cfg_context * np.sum(target_sz)
+    z_sz = np.sqrt(np.prod(target_sz + context))
+ 
+    # exemplar image
+    template = crop_and_resize(
+        img, center, z_sz,
+        out_size=cfg_exemplar_sz)
+    template_tensor = torch.from_numpy(template).float().permute(2, 0, 1)
+    template = normalize(template_tensor/255. , mean=torch.tensor(IMAGENET_DEFAULT_MEAN), std=torch.tensor(IMAGENET_DEFAULT_STD))
     
-                #update image
-                _, frame = cap.read()
-                frame_RGB = cv.cvtColor(frame,cv.COLOR_BGR2RGB)
-                full_image = numpy_to_torch(frame_RGB).squeeze(0)
-                full_image = full_image.to(device="cuda")
-                video_data.full_image = full_image
-                video_data.z_bbox = predicted_bounding_box.squeeze(0)
-                video_data.frame_index += 1
+    template_mean = torch.mean(template.unsqueeze(0),axis =2)
+    template_mean = torch.mean(template_mean,axis =2)
+    template_bbox =torch.tensor(bbox)
+    return template,template_bbox,template_mean
+
+def run_tracker(model,video_path,runner,branch_name):
+    tracker = Tracker(runner , branch_name)
+    device = tracker.device
+
+    model.train(False)
+    model = get_model(model)
+    model.eval()
+    #model is ready
+
+    #caputer images from video
+    cap = cv.VideoCapture(video_path)
+    display_name = 'Display: swinTrack'
+    cv.namedWindow(display_name, cv.WINDOW_NORMAL | cv.WINDOW_KEEPRATIO)
+    cv.resizeWindow(display_name, 960, 720)
+    success, frame = cap.read()
+
+    #convert image from BGR to RGB
+    frame_RGB = cv.cvtColor(frame,cv.COLOR_BGR2RGB)
+
+    #display
+    cv.imshow(display_name, frame)
+    while True:
+        #select target
+        cv.putText(frame, 'Select target ROI and press ENTER', (20, 30), cv.FONT_HERSHEY_COMPLEX_SMALL,
+                    1.5, (0, 0, 0), 1)
+        x, y, w, h = cv.selectROI(display_name, frame, fromCenter=False)
+        init_state = [x, y, w, h]
+
+        # image as tensor
+        full_image = numpy_to_torch(frame_RGB).squeeze(0).to(device=device)
+
+        #get template info
+        z_curated,template_object_bbox,template_image_mean = get_template(init_state , frame_RGB,tracker.template_curated_image_shape)
+
+        video_data = {
+            'z_curated' : z_curated,
+            'z_bbox' : template_object_bbox,
+            'z_image_mean' : template_image_mean,
+            'x' : full_image,
+            'frame_index' : 1,
+            'z_feat' : None
+            }
+        #initialize tracker 
+        tracker.initialize_tracker(video_data)
+
+        break
+
+    while True:
+        with torch.no_grad():
+            predicted_bounding_box = tracker.run_tracking(model)
+
+            #convert out
+            bbox = predicted_bounding_box.to(device = 'cpu').numpy()
+            bbox = bbox.astype(int)
+            state = [bbox[0],
+            bbox[1],
+            bbox[2]-bbox[0]+1,
+            bbox[3]-bbox[1]+1]
+
+            # show tracking result
+            cv.rectangle(frame, (state[0], state[1]), (state[2] + state[0], state[3] + state[1]),
+                        (0, 255, 0), 5)
+            font_color = (0, 0, 0)
+            cv.putText(frame, 'Tracking!', (20, 30), cv.FONT_HERSHEY_COMPLEX_SMALL, 1,
+                    font_color, 1)
+            cv.putText(frame, 'Press r to reset', (20, 55), cv.FONT_HERSHEY_COMPLEX_SMALL, 1,
+                    font_color, 1)
+            cv.putText(frame, 'Press q to quit', (20, 80), cv.FONT_HERSHEY_COMPLEX_SMALL, 1,
+                    font_color, 1)
+
+            # Display the resulting frame
+            cv.imshow(display_name, frame)
+            key = cv.waitKey(1)
+            if key == ord('q'):
+                break
+
+            #update image
+            _, frame = cap.read()
+            frame_RGB = cv.cvtColor(frame,cv.COLOR_BGR2RGB)
+            full_image = numpy_to_torch(frame_RGB).squeeze(0)
+            full_image = full_image.to(device=device)
+
+            #update tracker 
+            tracker.full_image = full_image
+            tracker.z_bbox = predicted_bounding_box
+            tracker.frame_index += 1
+
 
 def run_iteration(model, data_loader, runner, branch_name, event_dispatcher, logger, is_training, epoch):
     with enable_logger(logger), set_grad_enabled(is_training):
@@ -255,6 +256,7 @@ class RunnerDriver:
         self.output_path = runtime_vars.output_dir
         self.resume_path = runtime_vars.resume
         self.device = torch.device(runtime_vars.device)
+        self.video_path = runtime_vars.video_path
 
     def run(self):
         if self.resume_path is not None:
@@ -299,8 +301,11 @@ class RunnerDriver:
                     if is_training:
                         epoch_has_training_run = True
                     if (run_in_last_epoch and epoch + 1 == self.n_epochs) or (epoch_interval != 0 and epoch % epoch_interval == 0):
-                        # run_iteration(self.model, data_loader, runner, branch_name, event_dispatcher, logger, is_training, epoch)
-                        run_tracker(self.model,runner,branch_name)
+                        if branch_name == 'track':
+                            run_tracker(self.model,self.video_path,runner,branch_name)
+                        else :
+                            run_iteration(self.model, data_loader, runner, branch_name, event_dispatcher, logger, is_training, epoch)
+                        
 
                 if epoch_has_training_run and self.output_path is not None and (epoch % self.dumping_interval == 0 or epoch + 1 == self.n_epochs):
                     model_state_dict = {'version': 2, 'model': get_model(self.model).state_dict()}
