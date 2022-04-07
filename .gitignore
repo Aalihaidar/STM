@@ -537,6 +537,7 @@ logging
 .vscode
 wandb
 path.yaml
+path.template.yaml
 
 networks/
 swintrack-env/

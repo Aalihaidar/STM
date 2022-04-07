@@ -171,3 +171,10 @@ Raw results: [google drive](https://drive.google.com/file/d/1JOJY5F2JuYG0Z-uqcP6
       primaryClass={cs.CV}
 }
 ```
+
+## run tracking video
+for debugging purposes and depending on  data path in your computer
+change the following :
+- weight_path in core/entry/main.py
+- change output directory and video path in core/entry/train_args.py
+and run the code from main.py
