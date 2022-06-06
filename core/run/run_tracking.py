@@ -1,4 +1,6 @@
 from mimetypes import init
+from time import time
+from turtle import end_fill
 from data.tracking.post_processor.response_map import ResponseMapTrackingPostProcessing
 from runners.interface import BaseRunner
 from data.tracking.methods.sequential.curation_parameter_provider import SiamFCCurationParameterSimpleProvider
@@ -7,6 +9,7 @@ import torch
 from data.tracking.post_processor.bounding_box.default import DefaultBoundingBoxPostProcessor 
 from data.operator.bbox.spatial.vectorized.torch.utility.normalize import BoundingBoxNormalizationHelper
 from data.types.bounding_box_format import BoundingBoxFormat
+import time
 
 def _run_fn(fn, args):
     if isinstance(args, (list, tuple)):
@@ -25,7 +28,7 @@ class Tracker:
         self.post_processor = runner.tracker_evaluator[branch_name].post_processor
         self.interpolation_mode = runner.tracker_evaluator[branch_name].interpolation_mode
         self.template_curated_image_shape = runner.tracker_evaluator[branch_name].template_curated_image_cache_shape
-
+    
     def initialize_tracker(self,video_data):
         self.z_curated = video_data['z_curated']
         self.z_curated = self.z_curated.to(device = self.device)
@@ -34,6 +37,10 @@ class Tracker:
         self.full_image = video_data['x']
         self.frame_index = video_data['frame_index']
         self.z_feat = video_data['z_feat']
+        search_image = self.full_image.to(device=self.device)
+        search_image_size = search_image.shape[1:]
+        self.search_image_size = torch.tensor((search_image_size[1], search_image_size[0]),device=self.device)  # (W, H)
+        
 
         
     def run_tracking( self,model):
@@ -43,9 +50,9 @@ class Tracker:
         if self.frame_index == 1 :
             self.search_image_curation_parameter_provider.initialize(self.z_bbox) 
             self.z_feat  = _run_fn(model.initialize, self.z_curated.unsqueeze(0))
+            
 
-        search_image_size = search_image.shape[1:]
-        search_image_size = torch.tensor((search_image_size[1], search_image_size[0]),device=self.device)  # (W, H)
+        
         curation_parameter = self.search_image_curation_parameter_provider.get(self.search_curation_image_size)
         search_curated_image,_ = do_SiamFC_curation(search_image, self.search_curation_image_size, curation_parameter,
                                 self.interpolation_mode, self.z_image_mean)
@@ -67,5 +74,5 @@ class Tracker:
             predicted_bounding_box = self.bounding_box_post_processor(predicted_bounding_box, curation_parameter[:predicted_bounding_box.shape[0], ...])
 
         #update curation parameter for search image for next frame
-        self.search_image_curation_parameter_provider.update(predicted_iou, predicted_bounding_box.squeeze(0), search_image_size)
-        return predicted_bounding_box.squeeze(0)
+        self.search_image_curation_parameter_provider.update(predicted_iou, predicted_bounding_box.squeeze(0), self.search_image_size)
+        return predicted_bounding_box.squeeze(0),predicted_iou
