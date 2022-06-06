@@ -264,7 +264,7 @@ class RunnerDriver:
             model_state_dict, objects_state_dict = load_checkpoint(self.resume_path)
             assert model_state_dict['version'] == 2
             get_model(self.model).load_state_dict(model_state_dict['model'])
-            self.epoch = objects_state_dict['epoch']
+            self.epoch = objects_state_dict['epoch']+1
             self.event_dispatcher.dispatch_state_dict(objects_state_dict)
 
         self.event_dispatcher.device_changed(self.device)
@@ -295,7 +295,7 @@ class RunnerDriver:
             for epoch in tqdm(range(self.epoch, self.n_epochs), desc=description, file=sys.stdout):
                 print()
                 self.epoch = epoch
-
+                epoch_time_start = time.time()
                 epoch_has_training_run = False
                 for branch_name, (data_loader, runner, logger, is_training, epoch_interval, run_in_last_epoch, event_dispatcher) in self.runs.items():
                     assert epoch_interval >= 0
@@ -315,6 +315,9 @@ class RunnerDriver:
 
                     if additional_objects_state_dict is not None:
                         objects_state_dict.update(additional_objects_state_dict)
+                    epoch_time_end = time.time()
+                    epoch_time = epoch_time_end - epoch_time_start
+                    print(f'epoch training time is {epoch_time/60} min')
                     dump_checkpoint(model_state_dict, objects_state_dict, epoch, self.output_path)
 
         total_time = time.perf_counter() - start_time
