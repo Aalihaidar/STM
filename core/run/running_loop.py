@@ -215,13 +215,15 @@ def run_iteration(model, data_loader, runner, branch_name, event_dispatcher, log
             model = get_model(model)
         event_dispatcher.epoch_begin(epoch)
         for data in logger.loggers['local'].log_every(data_loader):
-            seq_name = data[2]['seq_name'][0]  # prevent from collision
+            # seq_name = data[2]['seq_name'][0]  # prevent from collision
             event_dispatcher.iteration_begin(is_training)
             logger.set_step(runner.get_iteration_index())
-            if seq_name == 'GOT-10k_Test_000152':
-                z_curated = data[0]['z_curated'][0] # size[3,112,112] should be template
-                x = data[0]['x'][0] #total image size[3,1080,1920]
-                runner.run_iteration(model, data)
+            runner.run_iteration(model, data)
+            # just for testing purpose
+            # if seq_name == 'GOT-10k_Test_000152':
+            #     z_curated = data[0]['z_curated'][0] # size[3,112,112] should be template
+            #     x = data[0]['x'][0] #total image size[3,1080,1920]
+            #     runner.run_iteration(model, data)
             event_dispatcher.iteration_end(is_training)
         event_dispatcher.epoch_end(epoch)
         gc.collect()
@@ -256,7 +258,6 @@ class RunnerDriver:
         self.output_path = runtime_vars.output_dir
         self.resume_path = runtime_vars.resume
         self.device = torch.device(runtime_vars.device)
-        self.video_path = runtime_vars.video_path
 
     def run(self):
         if self.resume_path is not None:
@@ -302,7 +303,7 @@ class RunnerDriver:
                         epoch_has_training_run = True
                     if (run_in_last_epoch and epoch + 1 == self.n_epochs) or (epoch_interval != 0 and epoch % epoch_interval == 0):
                         if branch_name == 'track':
-                            run_tracker(self.model,self.video_path,runner,branch_name)
+                            run_tracker(self.model,self.runtime_vars.video_path,runner,branch_name)
                         else :
                             run_iteration(self.model, data_loader, runner, branch_name, event_dispatcher, logger, is_training, epoch)
                         
