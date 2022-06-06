@@ -22,7 +22,7 @@ def get_train_args_parser():
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--resume', help='resume from checkpoint')
     parser.add_argument('--num_workers', default=4, type=int)
-    parser.add_argument('--checkpoint_interval', default=10, type=int)
+    parser.add_argument('--checkpoint_interval', default=1, type=int)
 
     # distributed training parameters
     parser.add_argument('--persistent_data_workers', action='store_true', help='make the workers of dataloader persistent')
