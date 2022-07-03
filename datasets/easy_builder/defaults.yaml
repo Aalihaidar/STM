@@ -57,23 +57,23 @@ datasets:
   #   splits:
   #     - full
 
-  OTB:
-    type: SOT
-    splits:
-      - full
+  # OTB:
+  #   type: SOT
+  #   splits:
+  #     - full
 
-  TrackingNet:
-    type: SOT
-    splits:
-      - train
-      - test
+  # TrackingNet:
+  #   type: SOT
+  #   splits:
+  #     - train
+  #     - test
 
-  UAV_Benchmark_S:
-    type: SOT
-    splits:
-      - full
+  # UAV_Benchmark_S:
+  #   type: SOT
+  #   splits:
+  #     - full
 
-  ImageNet-21k:
-    type: CLS
-    splits:
-      - full
+  # ImageNet-21k:
+  #   type: CLS
+  #   splits:
+  #     - full
