@@ -1,14 +1,15 @@
 import torch
 import torch.nn as nn
 from timm.models.layers import trunc_normal_
-
+from config import global_var as gv
 
 class SwinTrack(nn.Module):
-    def __init__(self, backbone, encoder, decoder, out_norm, head,
+    def __init__(self, backbone,concatenation, encoder, decoder, out_norm, head,
                  z_backbone_out_stage, x_backbone_out_stage,
                  z_input_projection, x_input_projection,
                  z_pos_enc, x_pos_enc):
         super(SwinTrack, self).__init__()
+        self.concatenation = concatenation
         self.backbone = backbone
         self.encoder = encoder
         self.decoder = decoder
@@ -50,8 +51,8 @@ class SwinTrack(nn.Module):
         x_feat = self._get_search_feat(x)
 
         return self._track(z_feat, x_feat)
-
-    def forward(self, z, x, z_feat=None):
+        
+    def forward(self, z1,z2, x, z_feat1=None, z_feat2=None):
         """
         Combined entry point for training and inference (include initialization and tracking).
             Args:
@@ -78,8 +79,18 @@ class SwinTrack(nn.Module):
                     Return:
                         Dict: Same as training.
             """
-        if z_feat is None:
-            z_feat = self.initialize(z)
+        if z_feat1 is None:
+            z_feat1 = self.initialize(z1)
+        if gv.trident:
+            if z2 is None:
+                z_feat2 = z_feat1.detach().clone()
+            else:
+                z_feat2 = self.initialize(z2)
+            #concatenation
+            z_feat,_ = self.concatenation.forward(z_feat1,z_feat1,z_feat2)
+        else:
+            z_feat = z_feat1.detach().clone()
+
         if x is not None:
             return self.track(z_feat, x)
         else:

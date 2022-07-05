@@ -6,6 +6,7 @@ from .modules.decoder.builder import build_decoder
 from .positional_encoding.builder import build_position_embedding
 from models.backbone.builder import build_backbone
 from models.head.builder import build_head
+from models.concatenation.builder import build_concatenation
 from .network import SwinTrack
 from data.tracking.methods.SiamFC.pseudo_data import build_siamfc_pseudo_data_generator
 
@@ -65,9 +66,10 @@ def build_swin_track_main_components(config, num_epochs, iterations_per_epoch, e
 
 def build_swin_track(config, load_pretrained, num_epochs, iterations_per_epoch, event_register: EventRegister, has_training_run):
     backbone = build_backbone(config, load_pretrained)
+    concatenation = build_concatenation(config)
     encoder, decoder, out_norm, z_backbone_out_stage, x_backbone_out_stage, z_input_projection, x_input_projection, z_pos_enc, x_pos_enc = \
         build_swin_track_main_components(config, num_epochs, iterations_per_epoch, event_register, has_training_run)
     head = build_head(config)
 
-    return SwinTrack(backbone, encoder, decoder, out_norm, head, z_backbone_out_stage, x_backbone_out_stage, z_input_projection, x_input_projection, z_pos_enc, x_pos_enc), \
+    return SwinTrack(backbone,concatenation, encoder, decoder, out_norm, head, z_backbone_out_stage, x_backbone_out_stage, z_input_projection, x_input_projection, z_pos_enc, x_pos_enc), \
            build_siamfc_pseudo_data_generator(config, event_register)
