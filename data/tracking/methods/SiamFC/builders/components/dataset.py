@@ -1,5 +1,5 @@
 from data.tracking.sampler.SiamFC.dataset_sampler import SOTTrackingSiameseForwardIteratorDatasetSampler,SOTTrackingSiameseRandomAccessIteratorDatasetSampler
-from data.tracking.methods.SiamFC.common.image_decoding import SiamFCImageDecodingProcessor
+from data.tracking.methods.SiamFC.common.image_decoding import SiamFCImageDecodingProcessor , tridentImageDecodingProcessor
 from data.tracking.sampler.SiamFC.type import SiamesePairSamplingMethod
 from data.tracking.dataset.dataset import ForwardIteratorWrapperDataset, RandomAccessIteratorWrapperDataset
 from core.run.event_dispatcher.register import EventRegister
@@ -8,11 +8,11 @@ from data.tracking.methods._common.builders.build_dataset_sampler import build_d
 from data.tracking.methods._common.builders.samplers_per_epoch import get_samples_per_epoch
 from data.tracking.methods._common.builders.dataset_sampling_weight import get_dataset_sampling_weight
 from data.tracking.methods._common.builders.reproducibility import get_reproducibility_parameters
-
+from config import global_var as gv
 
 def build_siamfc_dataset(sampling_config: dict, dataset_config: dict, post_processor,
                          master_address, deterministic_rng,
-                         seed, hook_register: EventRegister, rank):
+                         seed, hook_register: EventRegister, rank , trident = gv.trident):
     datasets, dataset_parameters = build_datasets(dataset_config)
 
     sequence_picker, is_random_accessible_dataset = build_dataset_sampler(datasets, dataset_parameters, sampling_config,
@@ -47,8 +47,10 @@ def build_siamfc_dataset(sampling_config: dict, dataset_config: dict, post_proce
             sampling_parameters = dataset_parameter['sampling']
             if 'frame_range' in sampling_parameters:
                 dataset_sampling_parameter['frame_range'] = sampling_parameters['frame_range']
-
-    processor = SiamFCImageDecodingProcessor(post_processor)
+    if trident:
+        processor = tridentImageDecodingProcessor(post_processor)
+    else:
+        processor = SiamFCImageDecodingProcessor(post_processor)
 
     if is_random_accessible_dataset:
         assert not sequence_sampler_parameters['enforce_fine_positive_sample']

@@ -5,6 +5,7 @@ import numpy as np
 from data.operator.bbox.validity import bbox_is_valid
 from data.operator.bbox.spatial.utility.half_pixel_offset.image import bounding_box_is_intersect_with_image
 from data.tracking.sampler.SiamFC.type import SiamesePairSamplingMethod
+from config import global_var as gv
 
 
 def _get_positive_frame_image_and_bbox(sequence, index):
@@ -29,13 +30,23 @@ def _get_frame_image_and_bbox(sequence, index, rng_engine, reference_bbox):
     return frame_image, frame_bbox
 
 
-def _data_getter(sequence, indices, rng_engine: np.random.Generator):
-    z_image, z_bbox = _get_positive_frame_image_and_bbox(sequence, indices[0])
-    if len(indices) == 1:
-        return ((z_image, z_bbox), )
+def _data_getter(sequence, indices, rng_engine: np.random.Generator,trident = gv.trident):
+    if trident:
+        z_image1, z_bbox1 = _get_positive_frame_image_and_bbox(sequence, indices[0])
+        z_image2, z_bbox2 = _get_positive_frame_image_and_bbox(sequence, indices[1])
+        if len(indices) == 1:
+            return ((z_image1, z_bbox1), )
 
-    x_image, x_bbox = _get_frame_image_and_bbox(sequence, indices[1], rng_engine, z_bbox)
-    return ((z_image, z_bbox), (x_image, x_bbox))
+        x_image, x_bbox = _get_frame_image_and_bbox(sequence, indices[2], rng_engine, z_bbox1)
+        return ((z_image1, z_bbox1),(z_image2, z_bbox2),(x_image, x_bbox))
+
+    else :
+        z_image, z_bbox = _get_positive_frame_image_and_bbox(sequence, indices[0])
+        if len(indices) == 1:
+            return ((z_image, z_bbox), )
+
+        x_image, x_bbox = _get_frame_image_and_bbox(sequence, indices[1], rng_engine, z_bbox)
+        return ((z_image, z_bbox), (x_image, x_bbox))
 
 
 def do_positive_sampling_in_single_object_tracking_dataset_sequence(sequence: SingleObjectTrackingDatasetSequence_MemoryMapped, frame_range: int, sampling_method: SiamesePairSamplingMethod, rng_engine: np.random.Generator):

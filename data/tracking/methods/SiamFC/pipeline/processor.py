@@ -73,6 +73,85 @@ class SiamTrackerProcessor:
 
         return data
 
+class tridentTrackerProcessor:
+    def __init__(self,
+                 template_size, search_size,
+                 template_area_factor, search_area_factor,
+                 template_scale_jitter_factor, search_scale_jitter_factor,
+                 template_translation_jitter_factor, search_translation_jitter_factor,
+                 gray_scale_probability,
+                 color_jitter, label_generator, interpolation_mode):
+        self.template_size = template_size
+        self.search_size = search_size
+        self.template_area_factor = template_area_factor
+        self.search_area_factor = search_area_factor
+        self.template_scale_jitter_factor = template_scale_jitter_factor
+        self.search_scale_jitter_factor = search_scale_jitter_factor
+        self.template_translation_jitter_factor = template_translation_jitter_factor
+        self.search_translation_jitter_factor = search_translation_jitter_factor
+        self.gray_scale_probability = gray_scale_probability
+        self.interpolation_mode = interpolation_mode
+        self.transform = build_SiamTracker_image_augmentation_transformer(color_jitter, True)
+        self.gray_scale_transformer = Grayscale(3)
+        self.label_generator = label_generator
+
+    def __call__(self, z_image1, z_bbox1,z_image2, z_bbox2, x_image, x_bbox, is_positive):
+        data = {}
+        data['is_positive'] = is_positive
+        if z_image1 is x_image:
+            z_image1 = x_image = z_image1.to(torch.float)
+            z_image2 = z_image2.to(torch.float)
+        else:
+            z_image1 = z_image1.to(torch.float)
+            z_image2 = z_image2.to(torch.float)
+            x_image = x_image.to(torch.float)
+
+        z_curated_bbox1, z_curation_parameter1 = SiamTracker_training_prepare_SiamFC_curation(
+            z_bbox1, self.template_area_factor,
+            self.template_size,
+            self.template_scale_jitter_factor,
+            self.template_translation_jitter_factor)
+
+        z_curated_bbox2, z_curation_parameter2 = SiamTracker_training_prepare_SiamFC_curation(
+            z_bbox2, self.template_area_factor,
+            self.template_size,
+            self.template_scale_jitter_factor,
+            self.template_translation_jitter_factor)
+
+        x_curated_bbox, x_curation_parameter = SiamTracker_training_prepare_SiamFC_curation(
+            x_bbox, self.search_area_factor,
+            self.search_size,
+            self.search_scale_jitter_factor,
+            self.search_translation_jitter_factor)
+
+        z_curated_image1, _ = do_SiamFC_curation(z_image1, self.template_size, z_curation_parameter1, self.interpolation_mode)
+        z_curated_image2, _ = do_SiamFC_curation(z_image2, self.template_size, z_curation_parameter2, self.interpolation_mode)
+        x_curated_image, _ = do_SiamFC_curation(x_image, self.search_size, x_curation_parameter, self.interpolation_mode)
+
+        z_curated_image1 /= 255.
+        z_curated_image2 /= 255.
+        x_curated_image /= 255.
+
+        if np.random.random() < self.gray_scale_probability:
+            z_curated_image1 = self.gray_scale_transformer(z_curated_image1)
+            z_curated_image2 = self.gray_scale_transformer(z_curated_image2)
+            x_curated_image = self.gray_scale_transformer(x_curated_image)
+
+        z_curated_image1 = self.transform(z_curated_image1)
+        z_curated_image2 = self.transform(z_curated_image2)
+        x_curated_image = self.transform(x_curated_image)
+
+        data.update({
+            'z_curated_image1': z_curated_image1,
+            'z_curated_image2': z_curated_image2,
+            'x_curated_image': x_curated_image,
+        })
+
+        labels = self.label_generator(x_curated_bbox, is_positive)
+
+        data['label'] = labels
+
+        return data
 
 def _collate(batch_list, key_name, as_tensor):
     collated = tuple(element[key_name] for element in batch_list)
@@ -117,6 +196,11 @@ class SiamFCBatchDataCollator:
             z_curated_image = _collate(data_list, 'z_curated_image', True)
             x_curated_image = _collate(data_list, 'x_curated_image', True)
             samples_batched_on_device = z_curated_image, x_curated_image
+        if 'z_curated_image1' in first_element:
+            z_curated_image1 = _collate(data_list, 'z_curated_image1', True)
+            z_curated_image2 = _collate(data_list, 'z_curated_image2', True)
+            x_curated_image = _collate(data_list, 'x_curated_image', True)
+            samples_batched_on_device = z_curated_image1, z_curated_image2, x_curated_image
 
         labels_batched_on_device = self.label_collator(tuple(element['label'] for element in data_list))
         return samples_batched_on_device, labels_batched_on_device, miscellanies_on_host, miscellanies_on_device

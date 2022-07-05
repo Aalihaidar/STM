@@ -21,7 +21,7 @@ from data.tracking.sampler._sampling_algos.sequence_sampling.SiamFC.MOT import \
     do_negative_sampling_in_multiple_object_tracking_dataset_sequence
 
 from data.tracking.sampler.SiamFC.type import SiamesePairSamplingMethod
-
+from config import global_var as gv
 
 class _BaseSOTTrackingSiameseIterableDatasetSampler:
     def __init__(self, sequence_picker, datasets, negative_sample_ratio, enforce_fine_positive_sample,
@@ -70,9 +70,9 @@ class _BaseSOTTrackingSiameseIterableDatasetSampler:
             raise NotImplementedError
         return data
 
-    def do_sampling(self, rng_engine: np.random.Generator):
+    def do_sampling(self, rng_engine: np.random.Generator,trident = gv.trident):
         dataset = self.datasets[self.current_index_of_dataset]
-        sequence = dataset[self.current_index_of_sequence]
+        sequence = dataset[self.current_index_of_sequence] 
 
         frame_range = self.default_frame_range
         if self.datasets_sampling_parameters is not None:
@@ -103,9 +103,14 @@ class _BaseSOTTrackingSiameseIterableDatasetSampler:
                             do_positive_sampling_in_multiple_object_tracking_dataset_sequence(sequence, frame_range,
                                                                                               self.sampling_method,
                                                                                               rng_engine)
-                    if len(sampled_data) != 2:
-                        return None
-                    data = (sampled_data[0][0], sampled_data[0][1], sampled_data[1][0], sampled_data[1][1], True)
+                    if trident:
+                        if len(sampled_data) != 3:
+                            return None
+                        data = (sampled_data[0][0], sampled_data[0][1], sampled_data[1][0], sampled_data[1][1],sampled_data[2][0], sampled_data[2][1], True)
+                    else :
+                        if len(sampled_data) != 2:
+                            return None
+                        data = (sampled_data[0][0], sampled_data[0][1], sampled_data[1][0], sampled_data[1][1], True)
                 else:
                     if isinstance(dataset, SingleObjectTrackingDataset_MemoryMapped):
                         sampled_data, is_positive = \

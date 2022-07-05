@@ -1,12 +1,26 @@
 from data.tracking.label.builder import build_label_generator_and_batch_collator
-from ...pipeline.processor import SiamTrackerProcessor, SiamFCBatchDataCollator
+from ...pipeline.processor import SiamTrackerProcessor, SiamFCBatchDataCollator , tridentTrackerProcessor
 from ...common.metric_collector import SiamFCMetricCollector
-
+from config import global_var as gv
 
 def _build_siamfc_data_processor(network_data_config: dict, data_processor_config, label_generator,
-                                 label_batch_data_collator):
+                                 label_batch_data_collator , trident = gv.trident):
     assert network_data_config['imagenet_normalization'] is True
-    return SiamTrackerProcessor(network_data_config['template_size'], network_data_config['search_size'],
+    if trident :
+        return tridentTrackerProcessor(network_data_config['template_size'], network_data_config['search_size'],
+                                    data_processor_config['area_factor']['template'],
+                                    data_processor_config['area_factor']['search'],
+                                    data_processor_config['augmentation']['scale_jitter_factor']['template'],
+                                    data_processor_config['augmentation']['scale_jitter_factor']['search'],
+                                    data_processor_config['augmentation']['translation_jitter_factor']['template'],
+                                    data_processor_config['augmentation']['translation_jitter_factor']['search'],
+                                    data_processor_config['augmentation']['gray_scale_probability'],
+                                    data_processor_config['augmentation']['color_jitter'],
+                                    label_generator,
+                                    network_data_config['interpolation_mode']), \
+            SiamFCBatchDataCollator(label_batch_data_collator)
+    else:
+        return  SiamTrackerProcessor(network_data_config['template_size'], network_data_config['search_size'],
                                 data_processor_config['area_factor']['template'],
                                 data_processor_config['area_factor']['search'],
                                 data_processor_config['augmentation']['scale_jitter_factor']['template'],

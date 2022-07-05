@@ -2,7 +2,7 @@ from data.tracking.sampler._sampling_algos.stateless.random import sampling_mult
 import numpy as np
 from data.tracking.sampler.SiamFC.type import SiamesePairSamplingMethod
 from data.tracking.sampler._sampling_algos.sequence_sampling.common._algo import sample_one_positive
-
+from config import global_var as gv
 
 def do_siamfc_pair_sampling(length: int, frame_range: int, mask: np.ndarray=None, sampling_method: SiamesePairSamplingMethod=SiamesePairSamplingMethod.causal, rng_engine: np.random.Generator=np.random.default_rng()):
     assert frame_range > 0
@@ -49,13 +49,17 @@ def do_siamfc_pair_sampling(length: int, frame_range: int, mask: np.ndarray=None
     return (z_index, x_index), is_positive
 
 
-def do_siamfc_pair_sampling_positive_only(length: int, frame_range: int, mask: np.ndarray=None, sampling_method: SiamesePairSamplingMethod=SiamesePairSamplingMethod.causal, rng_engine: np.random.Generator=np.random.default_rng()):
+def do_siamfc_pair_sampling_positive_only(length: int, frame_range: int, mask: np.ndarray=None, sampling_method: SiamesePairSamplingMethod=SiamesePairSamplingMethod.causal, rng_engine: np.random.Generator=np.random.default_rng(), trident = gv.trident):
     assert frame_range > 0
     sort = False
     frame_range = frame_range + 1
     if sampling_method == SiamesePairSamplingMethod.causal:
         sort = True
-    return sampling_multiple_indices_with_range_and_mask(length, mask, 2, frame_range, allow_duplication=False, allow_insufficiency=True, sort=sort, rng_engine=rng_engine)
+    if trident :
+        number_of_objects = 3
+    else:
+        number_of_objects = 2
+    return sampling_multiple_indices_with_range_and_mask(length, mask, number_of_objects, frame_range, allow_duplication=False, allow_insufficiency=True, sort=sort, rng_engine=rng_engine)
 
 
 def _gaussian(x, mu, sig):
