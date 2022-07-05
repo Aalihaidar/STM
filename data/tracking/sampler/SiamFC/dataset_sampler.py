@@ -121,9 +121,15 @@ class _BaseSOTTrackingSiameseIterableDatasetSampler:
                             do_sampling_in_multiple_object_tracking_dataset_sequence(sequence, frame_range,
                                                                                      self.sampling_method, rng_engine)
                     if is_positive == 0:
-                        data = (sampled_data[0][0], sampled_data[0][1], sampled_data[0][0], sampled_data[0][1], True)
+                        if gv.trident:
+                            data = (sampled_data[0][0], sampled_data[0][1], sampled_data[0][1], sampled_data[0][1],sampled_data[0][0], sampled_data[0][1], True)
+                        else:
+                            data = (sampled_data[0][0], sampled_data[0][1], sampled_data[0][0], sampled_data[0][1], True)
                     else:
-                        data = (sampled_data[0][0], sampled_data[0][1], sampled_data[1][0], sampled_data[1][1],
+                        if gv.trident:
+                            data = (sampled_data[0][0], sampled_data[0][1], sampled_data[1][0], sampled_data[1][1],sampled_data[2][0], sampled_data[2][1], True)
+                        else:
+                            data = (sampled_data[0][0], sampled_data[0][1], sampled_data[1][0], sampled_data[1][1],
                                 is_positive == 1)
             else:
                 raise NotImplementedError

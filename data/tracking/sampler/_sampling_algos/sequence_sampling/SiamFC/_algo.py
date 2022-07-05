@@ -9,14 +9,20 @@ def do_siamfc_pair_sampling(length: int, frame_range: int, mask: np.ndarray=None
     z_index = sample_one_positive(length, mask, rng_engine)
 
     if length == 1:
-        return (z_index,), 0
+        if gv.trident:
+            return (z_index,z_index,), 0
+        else:
+            return (z_index,), 0
 
     if sampling_method == SiamesePairSamplingMethod.causal:
         x_frame_begin = z_index + 1
         x_frame_end = z_index + frame_range + 1
         x_frame_end = min(x_frame_end, length)
         if x_frame_begin >= x_frame_end:
-            return (z_index,), 0
+            if gv.trident:
+                return (z_index,z_index,), 0
+            else:
+                return (z_index,), 0
     elif sampling_method == SiamesePairSamplingMethod.interval:
         x_frame_begin = z_index - frame_range
         x_frame_begin = max(x_frame_begin, 0)
@@ -40,13 +46,17 @@ def do_siamfc_pair_sampling(length: int, frame_range: int, mask: np.ndarray=None
             x_candidate_indices = x_candidate_indices[x_candidate_indices_mask]
     if len(x_candidate_indices) == 0:
         return (z_index,), 0
-
+    if gv.trident:
+        z2_index = rng_engine.choice(x_candidate_indices)
     x_index = rng_engine.choice(x_candidate_indices)
     if mask is not None and not mask[x_index]:
         is_positive = -1
     else:
         is_positive = 1
-    return (z_index, x_index), is_positive
+    if gv.trident:
+        return (z_index,z2_index, x_index), is_positive
+    else :
+        return (z_index, x_index), is_positive
 
 
 def do_siamfc_pair_sampling_positive_only(length: int, frame_range: int, mask: np.ndarray=None, sampling_method: SiamesePairSamplingMethod=SiamesePairSamplingMethod.causal, rng_engine: np.random.Generator=np.random.default_rng(), trident = gv.trident):
