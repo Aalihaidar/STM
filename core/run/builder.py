@@ -201,7 +201,7 @@ def _build_model(config, runtime_vars, building_context: BuildingContext):
     
     weight_path = runtime_vars.weight_path
     if weight_path is not None:
-        model.load_state_dict(torch.load(weight_path, map_location='cpu')['model'])
+        model.load_state_dict(torch.load(weight_path, map_location='cpu')['model'],strict=False)
 
     device = torch.device(runtime_vars.device)
     model.to(device)
