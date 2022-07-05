@@ -28,13 +28,15 @@ def sampling_multiple_indices_with_range_and_mask(length, mask: np.ndarray=None,
     length_of_sampling_indices = sampling_indices.shape[0]
     if not allow_duplication:
         if length_of_sampling_indices < number_of_objects:
+            allow_duplication = True
             if not allow_insufficiency:
                 return None
-            number_of_objects = length_of_sampling_indices
+            # number_of_objects = length_of_sampling_indices
 
     indices = rng_engine.choice(sampling_indices, number_of_objects, replace=allow_duplication)
     if sort:
         indices = np.sort(indices)
+    allow_duplication = False
     return indices
 
 
