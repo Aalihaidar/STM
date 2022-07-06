@@ -9,6 +9,7 @@ from miscellanies.yaml_ops import load_yaml
 from .sweep_utils import prepare_sweep
 from .mixin_utils import load_static_mixin_config_and_apply_rules
 from .build_and_run import build_and_run
+from config import global_var as gv
 
 
 def update_output_dir(args):
@@ -42,18 +43,21 @@ def entry(runtime_vars):
         update_output_dir(runtime_vars)
     wandb_instance = None
     if runtime_vars.wandb_distributed_aware or not is_dist_available_and_initialized():
-    # if runtime_vars.wandb_distributed_aware:
         from .setup_wandb import setup_wandb
-        # wandb_instance = setup_wandb(runtime_vars, config, str(host_names))
-        wandb_instance = None
+        if gv.wandb:
+            wandb_instance = setup_wandb(runtime_vars, config, str(host_names))
+        else:
+            wandb_instance = None
         if runtime_vars.do_sweep:
             runtime_vars.run_id = wandb_instance.id
             update_output_dir(runtime_vars)
     else:
         if is_main_process():
             from .setup_wandb import setup_wandb
-            # wandb_instance = setup_wandb(runtime_vars, config, str(host_names))
-            wandb_instance = None
+            if gv.wandb:
+                wandb_instance = setup_wandb(runtime_vars, config, str(host_names))
+            else:
+                wandb_instance = None
 
         if runtime_vars.do_sweep:
             if is_main_process():

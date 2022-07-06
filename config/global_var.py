@@ -1,1 +1,2 @@
 trident = True
+wandb = True
