@@ -1,5 +1,6 @@
 from runners.common.branch_utils import get_branch_specific_objects
 from runners.interface import BaseRunner
+import config.global_var as gv
 
 
 def _run_fn(fn, args):
@@ -64,6 +65,8 @@ class DefaultSiamFCEvaluator(BaseRunner):
                 tracker_initialization_results = _run_fn(model.initialize, initialization_samples)
             tracking_samples = tracker_evaluator.on_initialized(tracker_initialization_results)
             if tracking_samples is not None:
+                if gv.trident:
+                    tracking_samples['z_feat'],_ = model.concatenation(tracking_samples['z_feat'],tracking_samples['z_feat'],tracking_samples['z_feat'])
                 outputs = _run_fn(model.track, tracking_samples)
             outputs = tracker_evaluator.post_tracking(outputs)
 
