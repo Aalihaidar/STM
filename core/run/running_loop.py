@@ -282,8 +282,8 @@ class RunnerDriver:
         if self.wandb_instance is not None:
             _wandb_watch_model(get_model(self.model), self.wandb_instance, self.runtime_vars.watch_model_parameters,
                                self.runtime_vars.watch_model_gradients, self.runtime_vars.watch_model_freq)
-
-        print_model_efficiency_assessment(self.efficiency_assessor, get_model(self.model), self.wandb_instance)
+        #TODO
+        #print_model_efficiency_assessment(self.efficiency_assessor, get_model(self.model), self.wandb_instance)
 
         start_time = time.perf_counter()
 
@@ -303,7 +303,8 @@ class RunnerDriver:
                         epoch_has_training_run = True
                     if (run_in_last_epoch and epoch + 1 == self.n_epochs) or (epoch_interval != 0 and epoch % epoch_interval == 0):
                         if branch_name == 'track':
-                            run_tracker(self.model,self.runtime_vars.video_path,runner,branch_name)
+                            # run_tracker(self.model,self.runtime_vars.video_path,runner,branch_name)
+                            break
                         else :
                             run_iteration(self.model, data_loader, runner, branch_name, event_dispatcher, logger, is_training, epoch)
                         
