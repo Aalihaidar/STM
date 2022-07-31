@@ -205,6 +205,10 @@ def _build_model(config, runtime_vars, building_context: BuildingContext):
 
     device = torch.device(runtime_vars.device)
     model.to(device)
+    for name, param in model.named_parameters():
+        if 'concatenation' not in name:
+            print(name)
+            param.requires_grad = False
 
     building_context.model = model
     building_context.pseudo_data_generator = pseudo_data_generator
@@ -278,7 +282,7 @@ def build_running_tasks(runtime_vars, config: dict, global_rng, local_rng, wandb
     running_tasks = {}
     for branch_name, branch_context in building_context.branch_contexts.items():
         epoch_interval = branch_context.epoch_interval
-        run_in_last_epoch = False
+        run_in_last_epoch = True
         if epoch_interval < 0:
             run_in_last_epoch = True
             epoch_interval = 0
