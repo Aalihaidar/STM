@@ -51,7 +51,44 @@ class SwinTrack(nn.Module):
         x_feat = self._get_search_feat(x)
 
         return self._track(z_feat, x_feat)
+    
+    # 2 inputs
+    # def forward(self, z, x, z_feat=None):
+    #     """
+    #     Combined entry point for training and inference (include initialization and tracking).
+    #         Args:
+    #             z (torch.Tensor | None)
+    #             x (torch.Tensor | None)
+    #             z_feat (torch.Tensor | None)
+
+    #         Training:
+    #             Input:
+    #                 z: (B, H_z * W_z, 3), template image
+    #                 x: (B, H_x * W_x, 3), search image
+    #             Return:
+    #                 Dict: Output of the head, like {'class_score': torch.Tensor(B, num_classes, H, W), 'bbox': torch.Tensor(B, H, W, 4)}.
+    #         Inference:
+    #             Initialization:
+    #                 Input:
+    #                     z: (B, H_z * W_z, 3)
+    #                 Return:
+    #                     torch.Tensor: (B, H_z * W_z, dim)
+    #             Tracking:
+    #                 Input:
+    #                     z_feat: (B, H_z * W_z, dim)
+    #                     x: (B, H_x * W_x, 3)
+    #                 Return:
+    #                     Dict: Same as training.
+    #         """
+    #     if z_feat is None:
+    #         z_feat = self.initialize(z)
         
+    #     if x is not None:
+    #         return self.track(z_feat, x)
+    #     else:
+    #         return z_feat
+    
+    # 3 inputs
     def forward(self, z1,z2, x, z_feat1=None, z_feat2=None):
         """
         Combined entry point for training and inference (include initialization and tracking).
