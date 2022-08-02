@@ -547,3 +547,6 @@ swintrack-env/
 output/
 output2/
 running_loop_update_template.py
+/swintrack-venv
+config/global_path.py
+conda_init.sh
