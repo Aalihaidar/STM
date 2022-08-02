@@ -534,6 +534,9 @@ MigrationBackup/
 
 logging
 
+config/dataset/test_full.yaml
+config/dataset/val.yaml
+
 .vscode
 wandb
 path.yaml
@@ -542,3 +545,5 @@ path.template.yaml
 networks/
 swintrack-env/
 output/
+output2/
+running_loop_update_template.py
