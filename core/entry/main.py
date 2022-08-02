@@ -6,6 +6,7 @@ from .train_args import get_train_args_parser
 from .run_id import generate_run_id
 from .entry import entry
 from core.workaround.numpy import numpy_no_multithreading
+import config.global_path as gp
 
 
 def spawn_workers(args):
@@ -70,14 +71,15 @@ def _remove_ddp_parameter(args):
 
 def setup_arg_parser():
     parser = argparse.ArgumentParser('Model training & evaluation entry script', parents=[get_train_args_parser()])
-    parser.add_argument('--watch_model_parameters',default=False, action='store_true',
+    parser.add_argument('--watch_model_parameters', action='store_true',
                         help='watch the parameters of model using wandb')
-    parser.add_argument('--watch_model_gradients',default=False, action='store_true',
+    parser.add_argument('--watch_model_gradients' , action='store_true',
                         help='watch the gradients of model using wandb')
     parser.add_argument('--watch_model_freq', default=1000, type=int,
                         help='model watching frequency')
 
-    # parser.add_argument('--weight_path', default='/home/maiabboud/Documents/Master/SwinTrack/networks/SwinTrack-Tiny.pth', type=str, help='path to the .pth weight file')
+    # parser.add_argument('--weight_path', default= gp.swintrack_path + 'networks/SwinTrack-Tiny.pth', type=str, help='path to the .pth weight file')
+    # parser.add_argument('--weight_path', default= gp.swintrack_path + 'output/SwinTrack-Tiny-mixin-g-mixin-o-mixin-t-mixin-1-mixin-0-mixin-k-mixin-.-mixin-y-mixin-a-mixin-m-mixin-l-2022.07.17-16.53.20-084639/checkpoint0244.pth', type=str, help='path to the .pth weight file')
     parser.add_argument('--weight_path', type=str, help='path to the .pth weight file')
 
     return parser
