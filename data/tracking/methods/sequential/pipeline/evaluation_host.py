@@ -229,4 +229,7 @@ class EvaluationHostPipeline:
 
             curation_parameter_provider = sequence_context.curation_parameter_provider
             curation_parameter_provider.update(predicted_iou, predicted_bounding_box, sequence_frame_context.image_size)
-        return self._post_processing_do_post_hook(predicted_bounding_boxes)
+        # return predicted_bounding_boxes
+        return self._post_processing_do_post_hook(predicted_bounding_boxes),predicted_bounding_boxes
+
+
