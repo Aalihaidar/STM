@@ -544,9 +544,7 @@ path.template.yaml
 
 networks/
 swintrack-env/
-output/
-output2/
-output3/
+output*/
 running_loop_update_template.py
 /swintrack-venv
 config/global_path.py
