@@ -1,6 +1,8 @@
 from runners.common.branch_utils import get_branch_specific_objects
 from runners.interface import BaseRunner
 import config.global_var as gv
+from data.tracking.methods.SiamFC.common.siamfc_curation import prepare_SiamFC_curation, do_SiamFC_curation
+from data.tracking.methods.sequential.pipeline.common import get_transform
 
 
 def _run_fn(fn, args):
@@ -18,6 +20,9 @@ class DefaultSiamFCEvaluator(BaseRunner):
         self.tracker_evaluator = None
 
         self.branch_name = None
+
+        self.z_feat2 = None
+        
 
     def switch_branch(self, branch_name):
         self.branch_name = branch_name
@@ -66,9 +71,29 @@ class DefaultSiamFCEvaluator(BaseRunner):
             tracking_samples = tracker_evaluator.on_initialized(tracker_initialization_results)
             if tracking_samples is not None:
                 if gv.trident:
-                    tracking_samples['z_feat'],_ = model.concatenation(tracking_samples['z_feat'],tracking_samples['z_feat'],tracking_samples['z_feat'])
+                    if self.z_feat2 is None:
+                        self.z_feat2 = tracking_samples['z_feat']
+                    tracking_samples['z_feat'],_ = model.concatenation(tracking_samples['z_feat'],tracking_samples['z_feat'],self.z_feat2)
                 outputs = _run_fn(model.track, tracking_samples)
-            outputs = tracker_evaluator.post_tracking(outputs)
+            outputs,target_bbox = tracker_evaluator.post_tracking(outputs)
+
+            # bbox from tensor to array
+            target_bbox = target_bbox.cpu().detach().numpy()
+            target_bbox = target_bbox.reshape((4,))
+
+            #curation parameters
+            template_area_factor = 2.0
+            curated_template_image_size = [112,112]
+            interpolate_mode = 'bilinear'
+
+            #get target as template for each image
+            curation_parameter, _ = prepare_SiamFC_curation(target_bbox, template_area_factor, curated_template_image_size)
+            curated_first_frame_image, template_image_mean = do_SiamFC_curation(samples['x'][0], curated_template_image_size, curation_parameter,interpolate_mode)
+            transform = get_transform()
+            curated_first_frame_image = transform(curated_first_frame_image)
+
+            #get z_feat2
+            self.z_feat2 = _run_fn(model.initialize, curated_first_frame_image.unsqueeze(0))
 
         if data_pipeline_on_host is not None:
             for data_pipeline in reversed(data_pipeline_on_host):
