@@ -1,3 +1,4 @@
+from os import stat
 import sys
 import time
 import torch.distributed
@@ -162,12 +163,13 @@ def run_tracker(model,video_path,runner,branch_name):
             }
         #initialize tracker 
         tracker.initialize_tracker(video_data)
+        tracker.update_template = False
 
         break
 
     while True:
         with torch.no_grad():
-            predicted_bounding_box = tracker.run_tracking(model)
+            predicted_bounding_box,_ = tracker.run_tracking(model)
 
             #convert out
             bbox = predicted_bounding_box.to(device = 'cpu').numpy()
@@ -204,6 +206,14 @@ def run_tracker(model,video_path,runner,branch_name):
             tracker.full_image = full_image
             tracker.z_bbox = predicted_bounding_box
             tracker.frame_index += 1
+
+            #get new template every 10 frames
+            if tracker.frame_index % 40== 0 :
+                new_template,template_object_bbox,template_image_mean = get_template(state,frame_RGB,tracker.template_curated_image_shape)
+                tracker.new_template = new_template
+                tracker.update_template = True
+
+
 
 
 def run_iteration(model, data_loader, runner, branch_name, event_dispatcher, logger, is_training, epoch):
@@ -303,7 +313,7 @@ class RunnerDriver:
                         epoch_has_training_run = True
                     if (run_in_last_epoch and epoch + 1 == self.n_epochs) or (epoch_interval != 0 and epoch % epoch_interval == 0):
                         if branch_name == 'track':
-                            # run_tracker(self.model,self.runtime_vars.video_path,runner,branch_name)
+                            run_tracker(self.model,self.runtime_vars.video_path,runner,branch_name)
                             break
                         else :
                             run_iteration(self.model, data_loader, runner, branch_name, event_dispatcher, logger, is_training, epoch)

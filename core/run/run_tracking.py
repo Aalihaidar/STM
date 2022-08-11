@@ -40,7 +40,7 @@ class Tracker:
         search_image = self.full_image.to(device=self.device)
         search_image_size = search_image.shape[1:]
         self.search_image_size = torch.tensor((search_image_size[1], search_image_size[0]),device=self.device)  # (W, H)
-        
+        self.predicted_iou = None
 
         
     def run_tracking( self,model):
@@ -51,6 +51,10 @@ class Tracker:
             self.search_image_curation_parameter_provider.initialize(self.z_bbox) 
             self.z_feat  = _run_fn(model.initialize, self.z_curated.unsqueeze(0))
             
+        if self.update_template and self.predicted_iou>0.89:
+            z_feat_new = _run_fn(model.initialize,self.new_template.unsqueeze(0).to(device = self.device))
+            self.z_feat,_ = model.concatenation(self.z_feat,self.z_feat,z_feat_new)
+            self.update_template= False
 
         
         curation_parameter = self.search_image_curation_parameter_provider.get(self.search_curation_image_size)
@@ -66,7 +70,7 @@ class Tracker:
         if tracking_sample is not None:
             output = _run_fn(model.track, tracking_sample)
             output = self.post_processor(output)
-            predicted_iou, predicted_bounding_box = output['conf'], output['bbox']
+            self.predicted_iou, predicted_bounding_box = output['conf'], output['bbox']
             predicted_bounding_box = predicted_bounding_box.to(torch.float64)
             curation_parameter = curation_parameter.unsqueeze(0).to(device=self.device)
             
@@ -74,5 +78,6 @@ class Tracker:
             predicted_bounding_box = self.bounding_box_post_processor(predicted_bounding_box, curation_parameter[:predicted_bounding_box.shape[0], ...])
 
         #update curation parameter for search image for next frame
-        self.search_image_curation_parameter_provider.update(predicted_iou, predicted_bounding_box.squeeze(0), self.search_image_size)
-        return predicted_bounding_box.squeeze(0),predicted_iou
+        if self.predicted_iou > 0.89:
+            self.search_image_curation_parameter_provider.update(self.predicted_iou, predicted_bounding_box.squeeze(0), self.search_image_size)
+        return predicted_bounding_box.squeeze(0),self.predicted_iou
