@@ -93,7 +93,7 @@ class SwinTrack(nn.Module):
                     z_feat2 = self.initialize(z2)
                 #concatenation
                 z_feat,_ = self.concatenation.forward(z_feat,z_feat,z_feat2)
-                z_feat_temp = torch.cat([z_feat,z_feat2],1)
+                # z_feat_temp = torch.cat([z_feat,z_feat2],1)
 
             else:
                 z_feat = z_feat.detach().clone()
