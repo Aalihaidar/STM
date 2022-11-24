@@ -7,6 +7,7 @@ from .run_id import generate_run_id
 from .entry import entry
 from core.workaround.numpy import numpy_no_multithreading
 import config.global_path as gp
+import config.global_var as gv
 
 
 def spawn_workers(args):
@@ -77,10 +78,12 @@ def setup_arg_parser():
                         help='watch the gradients of model using wandb')
     parser.add_argument('--watch_model_freq', default=1000, type=int,
                         help='model watching frequency')
-
-    # parser.add_argument('--weight_path', default= gp.swintrack_path + 'networks/SwinTrack-Tiny.pth', type=str, help='path to the .pth weight file')
+    if gv.trident:
+        parser.add_argument('--weight_path', default= gp.swintrack_path + 'networks/checkpoint0039.pth', type=str, help='path to the .pth weight file')
+    else:
+        parser.add_argument('--weight_path', default= gp.swintrack_path + 'networks/SwinTrack-Tiny.pth', type=str, help='path to the .pth weight file')
     # parser.add_argument('--weight_path', default= gp.swintrack_path + 'output/SwinTrack-Tiny-mixin-g-mixin-o-mixin-t-mixin-1-mixin-0-mixin-k-mixin-.-mixin-y-mixin-a-mixin-m-mixin-l-2022.07.17-16.53.20-084639/checkpoint0244.pth', type=str, help='path to the .pth weight file')
-    parser.add_argument('--weight_path', type=str, help='path to the .pth weight file')
+    # parser.add_argument('--weight_path', type=str, help='path to the .pth weight file')
 
     return parser
     
