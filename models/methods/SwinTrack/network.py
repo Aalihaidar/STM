@@ -52,44 +52,8 @@ class SwinTrack(nn.Module):
 
         return self._track(z_feat, x_feat)
     
-    # 2 inputs
-    # def forward(self, z, x, z_feat=None):
-    #     """
-    #     Combined entry point for training and inference (include initialization and tracking).
-    #         Args:
-    #             z (torch.Tensor | None)
-    #             x (torch.Tensor | None)
-    #             z_feat (torch.Tensor | None)
-
-    #         Training:
-    #             Input:
-    #                 z: (B, H_z * W_z, 3), template image
-    #                 x: (B, H_x * W_x, 3), search image
-    #             Return:
-    #                 Dict: Output of the head, like {'class_score': torch.Tensor(B, num_classes, H, W), 'bbox': torch.Tensor(B, H, W, 4)}.
-    #         Inference:
-    #             Initialization:
-    #                 Input:
-    #                     z: (B, H_z * W_z, 3)
-    #                 Return:
-    #                     torch.Tensor: (B, H_z * W_z, dim)
-    #             Tracking:
-    #                 Input:
-    #                     z_feat: (B, H_z * W_z, dim)
-    #                     x: (B, H_x * W_x, 3)
-    #                 Return:
-    #                     Dict: Same as training.
-    #         """
-    #     if z_feat is None:
-    #         z_feat = self.initialize(z)
-        
-    #     if x is not None:
-    #         return self.track(z_feat, x)
-    #     else:
-    #         return z_feat
-    
-    # 3 inputs
-    def forward(self, z1,z2, x, z_feat1=None, z_feat2=None):
+    # if trident we have 3 inputs
+    def forward(self,*inputs):
         """
         Combined entry point for training and inference (include initialization and tracking).
             Args:
@@ -116,22 +80,36 @@ class SwinTrack(nn.Module):
                     Return:
                         Dict: Same as training.
             """
-        if z_feat1 is None:
-            z_feat1 = self.initialize(z1)
         if gv.trident:
-            if z2 is None:
-                z_feat2 = z_feat1.detach().clone()
-            else:
-                z_feat2 = self.initialize(z2)
-            #concatenation
-            z_feat,_ = self.concatenation.forward(z_feat1,z_feat1,z_feat2)
-        else:
-            z_feat = z_feat1.detach().clone()
+            z_feat2=None
+            z_feat=None
+            z,z2, x  = inputs
+            if z_feat is None:
+                z_feat = self.initialize(z)
+            if gv.trident:
+                if z2 is None:
+                    z_feat2 = z_feat.detach().clone()
+                else:
+                    z_feat2 = self.initialize(z2)
+                #concatenation
+                z_feat,_ = self.concatenation.forward(z_feat,z_feat,z_feat2)
+                z_feat_temp = torch.cat([z_feat,z_feat2],1)
 
+            else:
+                z_feat = z_feat.detach().clone()
+
+        else:
+            z_feat=None
+            z, x = inputs
+            if z_feat is None:
+                z_feat = self.initialize(z)
+        
         if x is not None:
             return self.track(z_feat, x)
         else:
             return z_feat
+
+        
 
     def _get_template_feat(self, z):
         z_feat, = self.backbone(z, (self.z_backbone_out_stage,), False)
