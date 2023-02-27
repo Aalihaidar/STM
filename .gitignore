@@ -549,3 +549,10 @@ running_loop_update_template.py
 /swintrack-venv
 config/global_path.py
 conda_init.sh
+evalution_video_save.py
+performance_plot.py
+project_52.avi
+project_129.avi
+project_161.avi
+project_175.avi
+project_180.avi
