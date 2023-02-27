@@ -17,7 +17,7 @@ import torch
 from torchvision.transforms.functional import normalize
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from core.run.run_tracking import Tracker
-
+import config.global_var as gv
 
 
 
@@ -208,7 +208,7 @@ def run_tracker(model,video_path,runner,branch_name):
             tracker.frame_index += 1
 
             #get new template every 10 frames
-            if tracker.frame_index % 40== 0 :
+            if tracker.frame_index % gv.update_template_interval == 0 :
                 new_template,template_object_bbox,template_image_mean = get_template(state,frame_RGB,tracker.template_curated_image_shape)
                 tracker.new_template = new_template
                 tracker.update_template = True

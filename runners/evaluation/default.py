@@ -79,7 +79,7 @@ class DefaultSiamFCEvaluator(BaseRunner):
             if outputs is not None:
                 outputs,target_bbox,iou = tracker_evaluator.post_tracking(outputs)
 
-            if gv.trident and (iou > 0.85) and (miscellanies_on_host['frame_index'] > 1) and (miscellanies_on_host['frame_index'] % 40) == 0 : 
+            if gv.trident and (iou > gv.iou_threshold) and (miscellanies_on_host['frame_index'] > 1) and (miscellanies_on_host['frame_index'] % gv.update_template_interval) == 0 : 
                 # bbox from tensor to array
                 target_bbox = target_bbox.cpu().detach().numpy()
                 target_bbox = target_bbox.reshape((4,))

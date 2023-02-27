@@ -52,7 +52,7 @@ class Tracker:
             self.search_image_curation_parameter_provider.initialize(self.z_bbox) 
             self.z_feat  = _run_fn(model.initialize, self.z_curated.unsqueeze(0))
             
-        if self.update_template and self.predicted_iou>0.89 and gv.trident:
+        if self.update_template and self.predicted_iou>gv.iou_threshold and gv.trident:
             z_feat_new = _run_fn(model.initialize,self.new_template.unsqueeze(0).to(device = self.device))
             self.z_feat,_ = model.concatenation(self.z_feat,self.z_feat,z_feat_new)
             self.update_template= False
@@ -81,6 +81,6 @@ class Tracker:
         #update curation parameter for search image for next frame
 
         # don't update search window size and position until iou > threshold
-        if self.predicted_iou > 0.89:
-            self.search_image_curation_parameter_provider.update(self.predicted_iou, predicted_bounding_box.squeeze(0), self.search_image_size)
+        # if self.predicted_iou > 0.89:
+        self.search_image_curation_parameter_provider.update(self.predicted_iou, predicted_bounding_box.squeeze(0), self.search_image_size)
         return predicted_bounding_box.squeeze(0),self.predicted_iou
