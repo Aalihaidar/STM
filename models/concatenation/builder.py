@@ -3,6 +3,6 @@ def build_concatenation(config: dict, with_multi_scale_wrapper=True):
     dim =  config['transformer']['backbone']['dim']
     # template_shape = config['transformer']['backbone']['template']['shape'] = [7, 7]
 
-    return MultiheadAttention(dim,4)
+    return MultiheadAttention(dim,8)
     # head_config = config['head']
     # head_type = head_config['type']
