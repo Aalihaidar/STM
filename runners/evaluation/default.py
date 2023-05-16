@@ -73,7 +73,7 @@ class DefaultSiamFCEvaluator(BaseRunner):
                 if gv.trident:
                     if self.z_feat2 is None or miscellanies_on_host['frame_index'] == 1:
                         self.z_feat2 = tracking_samples['z_feat']
-                    tracking_samples['z_feat'],_ = model.concatenation(tracking_samples['z_feat'],tracking_samples['z_feat'],self.z_feat2)
+                    tracking_samples['z_feat'],_ = model.concatenation(tracking_samples['z_feat'],self.z_feat2,self.z_feat2)
                 outputs = _run_fn(model.track, tracking_samples)
             iou = 0
             if outputs is not None:
