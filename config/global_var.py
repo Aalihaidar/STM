@@ -1,4 +1,4 @@
 trident = True
-wandb = True
+wandb = False
 update_template_interval = 30
-iou_threshold = 0.8
+iou_threshold = 0.9
