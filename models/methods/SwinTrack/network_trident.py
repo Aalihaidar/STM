@@ -3,12 +3,13 @@ import torch.nn as nn
 from timm.models.layers import trunc_normal_
 from config import global_var as gv
 
-class SwinTrack(nn.Module):
-    def __init__(self, backbone, encoder, decoder, out_norm, head,
+class SwinTrack_t(nn.Module):
+    def __init__(self, backbone,concatenation, encoder, decoder, out_norm, head,
                  z_backbone_out_stage, x_backbone_out_stage,
                  z_input_projection, x_input_projection,
                  z_pos_enc, x_pos_enc):
-        super(SwinTrack, self).__init__()
+        super(SwinTrack_t, self).__init__()
+        self.concatenation = concatenation
         self.backbone = backbone
         self.encoder = encoder
         self.decoder = decoder
@@ -85,17 +86,17 @@ class SwinTrack(nn.Module):
             z,z2, x  = inputs
             if z_feat is None:
                 z_feat = self.initialize(z)
-            # if gv.trident:
-            #     if z2 is None:
-            #         z_feat2 = z_feat.detach().clone()
-            #     else:
-            #         z_feat2 = self.initialize(z2)
-            #     #concatenation
-            #     z_feat,_ = self.concatenation.forward(z_feat,z_feat,z_feat2)
-            #     # z_feat_temp = torch.cat([z_feat,z_feat2],1)
+            if gv.trident:
+                if z2 is None:
+                    z_feat2 = z_feat.detach().clone()
+                else:
+                    z_feat2 = self.initialize(z2)
+                #concatenation
+                z_feat,_ = self.concatenation.forward(z_feat,z_feat2,z_feat2)
+                # z_feat_temp = torch.cat([z_feat,z_feat2],1)
 
-            # else:
-            z_feat = z_feat.detach().clone()
+            else:
+                z_feat = z_feat.detach().clone()
 
         else:
             z_feat=None
